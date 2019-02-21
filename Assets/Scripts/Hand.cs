@@ -6,9 +6,9 @@ using Valve.VR;
 public class Hand : MonoBehaviour
 {
     [SteamVR_DefaultAction("Squeeze")]
-    public SteamVR_Action_Boolean GrabGripAction = null;
+    public SteamVR_Action_Boolean GrabPinchAction = null;
 
-    private SteamVR_Behaviour_Pose _grabGripPose = null;
+    private SteamVR_Behaviour_Pose _grabPinchPose = null;
     private FixedJoint _joint = null;
 
     private Grabbable _currentGrabbable = null;
@@ -16,7 +16,7 @@ public class Hand : MonoBehaviour
 
     private void Awake()
     {
-        _grabGripPose = GetComponent<SteamVR_Behaviour_Pose>();
+        _grabPinchPose = GetComponent<SteamVR_Behaviour_Pose>();
         _joint = GetComponent<FixedJoint>();
     }
 
@@ -24,16 +24,16 @@ public class Hand : MonoBehaviour
     void Update()
     {
         // Down
-        if (GrabGripAction.GetStateDown(_grabGripPose.inputSource))
+        if (GrabPinchAction.GetStateDown(_grabPinchPose.inputSource))
         {
-            print(_grabGripPose.inputSource + " Trigger down");
+            print(_grabPinchPose.inputSource + " Trigger down");
             Pickup();
         }
 
         // Up
-        if (GrabGripAction.GetStateUp(_grabGripPose.inputSource))
+        if (GrabPinchAction.GetStateUp(_grabPinchPose.inputSource))
         {
-            print(_grabGripPose.inputSource + " Trigger up");
+            print(_grabPinchPose.inputSource + " Trigger up");
             Drop();
         }
     }
@@ -57,16 +57,64 @@ public class Hand : MonoBehaviour
 
     public void Pickup()
     {
+        // Get nearest
+        _currentGrabbable = GetNearestGrabbable();
 
+        // Null check
+        if (!_currentGrabbable)
+            return;
+
+        // Already held check
+        if (_currentGrabbable._activeController)
+            _currentGrabbable._activeController.Drop();
+
+        //  Position
+        _currentGrabbable.transform.position = transform.position;
+
+        // Attach
+        Rigidbody targetBody = _currentGrabbable.GetComponent<Rigidbody>();
+        _joint.connectedBody = targetBody;
+
+        // Set active hand
+        _currentGrabbable._activeController = this;
     }
 
     public void Drop()
     {
+        // Null check
+        if(!_currentGrabbable)
+            return;
 
+        // Apply velocity
+        Rigidbody targetBody = _currentGrabbable.GetComponent<Rigidbody>();
+        targetBody.velocity = _grabPinchPose.GetVelocity();
+        targetBody.angularVelocity = _grabPinchPose.GetAngularVelocity();
+
+        // Detatch
+        _joint.connectedBody = null;
+
+        // Clear
+        _currentGrabbable._activeController = null;
+        _currentGrabbable = null;
     }
 
     private Grabbable GetNearestGrabbable()
     {
-        return null;
+        Grabbable nearest = null;
+        float minDistance = float.MaxValue;
+        float distance = 0.0f;
+
+        foreach(Grabbable grabbable in _contactGrabbables)
+        {
+            distance = (grabbable.transform.position - transform.position).sqrMagnitude;
+
+            if(distance < minDistance)
+            {
+                minDistance = distance;
+                nearest = grabbable;
+            }
+        }
+
+        return nearest;
     }
 }
