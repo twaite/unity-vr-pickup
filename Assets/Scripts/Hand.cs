@@ -26,21 +26,18 @@ public class Hand : MonoBehaviour
         // Down
         if (GrabPinchAction.GetStateDown(_grabPinchPose.inputSource))
         {
-            print(_grabPinchPose.inputSource + " Trigger down");
             Pickup();
         }
 
         // Up
         if (GrabPinchAction.GetStateUp(_grabPinchPose.inputSource))
         {
-            print(_grabPinchPose.inputSource + " Trigger up");
             Drop();
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        print(other + " collided with controller");
         if (other.gameObject.CompareTag("Grabbable"))
         {
             _contactGrabbables.Add(other.gameObject.GetComponent<Grabbable>());
